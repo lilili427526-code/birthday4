@@ -368,7 +368,7 @@
     </div>
 
     <div class="video-overlay" id="videoOverlay">
-        <video id="menuVideo" playsinline></video>
+        <video id="menuVideo" playsinline webkit-playsinline></video>
     </div>
 
     <script>
@@ -507,15 +507,41 @@
         // ----- 菜单视频播放与背景音乐渐出/渐入逻辑 -----
         function playMenuVideo(videoSrc) {
             fadeOutMusic(() => {
-                // 渐出完成后暂停背景音乐
                 if (bgMusic) bgMusic.pause();
-                menuVideo.src = VIDEO_BASE_URL + videoSrc; 
+
+                // 设置源并显示遮罩
+                menuVideo.src = VIDEO_BASE_URL + videoSrc;
                 videoOverlay.style.display = 'flex';
-                menuVideo.play().catch(err => {
-                    console.log("视频播放失败，需要用户交互: ", err);
-                });
+
+                // 增加一个引导提示
+                let hint = document.getElementById('playHint');
+                if (!hint) {
+                    hint = document.createElement('div');
+                    hint.id = 'playHint';
+                    hint.innerHTML = '点击屏幕开始播放';
+                    hint.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:1.5rem; pointer-events:none; z-index:101;';
+                    videoOverlay.appendChild(hint);
+                }
+                hint.style.display = 'block';
+
+                // 尝试播放
+                const playPromise = menuVideo.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        hint.style.display = 'none'; // 播放成功则隐藏提示
+                    }).catch(err => {
+                        console.log("需要用户点击触发:", err);
+                    });
+                }
             });
         }
+
+        // 增加点击触发播放的逻辑
+        videoOverlay.addEventListener('click', function () {
+            menuVideo.play();
+            const hint = document.getElementById('playHint');
+            if (hint) hint.style.display = 'none';
+        });
 
         menuVideo.onended = function() {
             videoOverlay.style.display = 'none';
@@ -580,6 +606,17 @@
             if (document.getElementById('page5').classList.contains('active')) {
                 document.getElementById('page5').style.backgroundImage = `url(${bgImgList[0]})`;
             }
+        });
+
+        window.addEventListener('load', () => {
+            const videoList = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4'];
+            videoList.forEach(src => {
+                let preload = document.createElement('video');
+                preload.src = VIDEO_BASE_URL + src;
+                preload.muted = true; // 静音预加载不会触发权限拦截
+                preload.preload = 'auto';
+                preload.load();
+            });
         });
 
         console.log('🎂 Happy Birthday! Hope you like this little surprise~');
